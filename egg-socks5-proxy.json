@@ -1,0 +1,64 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2024-08-07T20:57:20+04:00",
+    "name": "Socks5 Proxy",
+    "author": "dimoka113@i113d.ru",
+    "description": "The name speaks for itself.",
+    "features": null,
+    "docker_images": {
+        "Dotnet_5": "ghcr.io\/parkervcp\/yolks:dotnet_5",
+        "Dotnet_6": "ghcr.io\/parkervcp\/yolks:dotnet_6",
+        "Dotnet_7": "ghcr.io\/parkervcp\/yolks:dotnet_7"
+    },
+    "file_denylist": [],
+    "startup": "chmod u+rwx .\/{{FILE}} && .\/{{FILE}} -p {{SERVER_PORT}} --username {{USERNAME}} --password {{PASSWORD}}",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": [\r\n        \"change this text 1\",\r\n        \"change this text 2\"\r\n    ]\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!\/bin\/ash\r\ncd \/mnt\/server\r\n\r\necho -e \"Starting Download Socks5 Proxy Server...\"\r\napt install curl\r\napt install zip\r\n\r\ncurl -o proxy.zip https:\/\/filehost.i113d.ru\/sockss5-proxy.zip\r\n\r\nunzip proxy.zip",
+            "container": "ghcr.io\/pterodactyl\/installers:alpine",
+            "entrypoint": "ash"
+        }
+    },
+    "variables": [
+        {
+            "name": "File",
+            "description": "",
+            "env_variable": "FILE",
+            "default_value": "proxy",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Username",
+            "description": "",
+            "env_variable": "USERNAME",
+            "default_value": "test",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Password",
+            "description": "",
+            "env_variable": "PASSWORD",
+            "default_value": "test",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        }
+    ]
+}

@@ -25,6 +25,10 @@ Run a SOCKS5 proxy on port 1080.
 ```sh
 ./proxy -p 1080
 ```
+also you can add username and password your proxy server with:
+```sh
+./proxy -p 1080 --username test --password yourpassword
+```
 
 Test it with `curl`.
 

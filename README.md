@@ -42,12 +42,11 @@ For more information, run `./proxy -h` for help.
 
 ## Использование в ([Pterodactyl](https://pterodactyl.io/))
 
-Install Egg from ([here](https://promo.i113d.ru/socks5proxy/proxy.zip))
+Install Egg from [here](https://promo.i113d.ru/socks5proxy/proxy.zip)
 
-Add Egg in your panel ([how](https://promo.i113d.ru/socks5proxy/installeggs.mp4))?
+Add Egg in your panel ([how](https://promo.i113d.ru/socks5proxy/installeggs.mp4)?)
 
 Enjoy!
-
 
 
 

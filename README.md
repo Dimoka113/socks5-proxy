@@ -15,7 +15,7 @@ make -j
 If you don't have CMake installed, you could build it with GCC.
 
 ```sh
-gcc proxy.c -o proxy -pthread -O3
+gcc proxypass.c -o proxy -pthread -O3
 ```
 
 ## Run

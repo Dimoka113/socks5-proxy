@@ -12,6 +12,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <getopt.h>
+
+// Определение SOCKS5 метода аутентификации по имени пользователя и паролю
+#define SOCKS5_AUTH_USERNAME_PASSWORD 0x02
+
+// Глобальные переменные для хранения имени пользователя и пароля
+char *username = NULL;
+char *password = NULL;
 
 int recv_exact(int fd, void *buf, size_t n, int flags) {
     size_t remain = n;
@@ -19,20 +27,14 @@ int recv_exact(int fd, void *buf, size_t n, int flags) {
         ssize_t recv_len = recv(fd, buf, remain, flags);
         if (recv_len < 0) {
             if (errno == EINTR || errno == EAGAIN) {
-                // EINTR: interrupted by system
-                // EAGAIN: recv is blocked
-                // Try again
                 continue;
             } else {
-                // Unexpected error
                 perror("recv()");
                 return -1;
             }
         } else if (recv_len == 0) {
-            // No data from socket: disconnected.
             return -1;
         } else {
-            // read success
             remain -= recv_len;
             buf += recv_len;
         }
@@ -60,6 +62,42 @@ void send_server_hello(int fd, uint8_t method) {
     send(fd, &server_hello, sizeof(socks5_server_hello_t), 0);
 }
 
+int handle_auth(int client_fd) {
+    uint8_t version;
+    if (recv_exact(client_fd, &version, sizeof(uint8_t), 0) != 0) {
+        return -1;
+    }
+    if (version != 0x01) {
+        fprintf(stderr, "Unsupported auth version %#02x\n", version);
+        return -1;
+    }
+
+    char client_username[256];
+    char client_password[256];
+
+    if (recv_string(client_fd, client_username) < 0) {
+        return -1;
+    }
+    if (recv_string(client_fd, client_password) < 0) {
+        return -1;
+    }
+
+    uint8_t status = 0x01; // Authentication failed
+
+    if (strcmp(client_username, username) == 0 && strcmp(client_password, password) == 0) {
+        status = 0x00; // Authentication succeeded
+    }
+
+    uint8_t response[2] = {0x01, status};
+    send(client_fd, response, sizeof(response), 0);
+
+    if (status != 0x00) {
+        return -1;
+    }
+
+    return 0;
+}
+
 int handle_greeting(int client_fd) {
     socks5_client_hello_t client_hello;
     if (recv_exact(client_fd, &client_hello, sizeof(socks5_client_hello_t), 0) != 0) {
@@ -74,23 +112,29 @@ int handle_greeting(int client_fd) {
     if (recv_exact(client_fd, methods, client_hello.num_methods, 0) != 0) {
         return -1;
     }
-    // Find server auth method in client's list
+
     int found = 0;
     for (int i = 0; i < (int) client_hello.num_methods; i++) {
-        if (methods[i] == SOCKS5_AUTH_NO_AUTH) {
-            // Find auth method in client's supported method list
+        if (methods[i] == SOCKS5_AUTH_NO_AUTH && username == NULL && password == NULL) {
             found = 1;
+            send_server_hello(client_fd, SOCKS5_AUTH_NO_AUTH);
+            break;
+        } else if (methods[i] == SOCKS5_AUTH_USERNAME_PASSWORD && username != NULL && password != NULL) {
+            found = 1;
+            send_server_hello(client_fd, SOCKS5_AUTH_USERNAME_PASSWORD);
+            if (handle_auth(client_fd) != 0) {
+                return -1;
+            }
             break;
         }
     }
+
     if (!found) {
-        // No acceptable method
         fprintf(stderr, "No acceptable method from client\n");
         send_server_hello(client_fd, SOCKS5_AUTH_NOT_ACCEPT);
         return -1;
     }
-    // Send auth method choice
-    send_server_hello(client_fd, SOCKS5_AUTH_NO_AUTH);
+
     return 0;
 }
 
@@ -130,7 +174,6 @@ void send_ip_reply(int fd, uint8_t reply_type, in_addr_t ip, in_port_t port) {
 }
 
 int handle_request(int client_fd) {
-    // Handle socks request
     socks5_request_t req;
     if (recv_exact(client_fd, &req, sizeof(socks5_request_t), 0) != 0) {
         return -1;
@@ -178,19 +221,16 @@ int handle_request(int client_fd) {
 
         send_ip_reply(client_fd, SOCKS5_REP_SUCCESS, ip, port);
     } else if (req.addr_type == SOCKS5_ATYP_DOMAIN_NAME) {
-        // Get domain name
         char domain[UINT8_MAX + 1];
         int domain_len = recv_string(client_fd, domain);
         if (domain_len <= 0) {
             return -1;
         }
-        // Get port
         in_port_t port;
         if (recv_exact(client_fd, &port, sizeof(in_port_t), 0) != 0) {
             return -1;
         }
 
-        // Get ip by host name
         char port_s[8];
         sprintf(port_s, "%d", ntohs(port));
         struct addrinfo *addr_info;
@@ -199,7 +239,7 @@ int handle_request(int client_fd) {
             send_domain_reply(client_fd, SOCKS5_REP_GENERAL_FAILURE, domain, domain_len, port);
             return -1;
         }
-        // Try connecting to host
+
         for (struct addrinfo *ai = addr_info; ai != NULL; ai = ai->ai_next) {
             int try_fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
             if (try_fd == -1) { continue; }
@@ -280,13 +320,12 @@ _Noreturn void server_loop(int server_fd) {
         struct sockaddr_in client_addr;
         socklen_t client_addr_len = sizeof(client_addr);
 
-        // Check for incoming connections
         int client_fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_addr_len);
         if (client_fd < 0) {
             perror("accept()");
             continue;
         }
-        // Disable Nagle algorithm to forward packets ASAP
+
         int optval = 1;
         if (setsockopt(client_fd, SOL_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
             perror("setsockopt()");
@@ -308,15 +347,29 @@ _Noreturn void server_loop(int server_fd) {
 }
 
 void print_help(const char *prog_name) {
-    printf("USAGE: %s [-h] [-p PORT]\n", prog_name);
+    printf("USAGE: %s [-h] [-p PORT] [--username USERNAME] [--password PASSWORD]\n", prog_name);
 }
 
 int main(int argc, char **argv) {
     int bind_port = 1080;
 
-    int ch;
-    while ((ch = getopt(argc, argv, "p:h")) != -1) {
-        switch (ch) {
+    static struct option long_options[] = {
+            {"username", required_argument, 0, 0},
+            {"password", required_argument, 0, 0},
+            {0, 0, 0, 0}
+    };
+
+    int opt;
+    int option_index = 0;
+    while ((opt = getopt_long(argc, argv, "p:h", long_options, &option_index)) != -1) {
+        switch (opt) {
+            case 0:
+                if (strcmp(long_options[option_index].name, "username") == 0) {
+                    username = strdup(optarg);
+                } else if (strcmp(long_options[option_index].name, "password") == 0) {
+                    password = strdup(optarg);
+                }
+                break;
             case 'p':
                 bind_port = atoi(optarg);
                 break;
@@ -329,20 +382,19 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Create a socket using TCP protocol over IPv4
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
         perror("socket()");
         exit(EXIT_FAILURE);
     }
-    // Reuse address
+
     int optval = 1;
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
         perror("setsockopt()");
         close(server_fd);
         exit(EXIT_FAILURE);
     }
-    // Bind socket to given address
+
     struct sockaddr_in bind_addr;
     bind_addr.sin_family = AF_INET;
     bind_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -352,14 +404,14 @@ int main(int argc, char **argv) {
         close(server_fd);
         exit(EXIT_FAILURE);
     }
-    // Listen to socket
+
     if (listen(server_fd, SOMAXCONN) < 0) {
         perror("listen()");
         close(server_fd);
         exit(EXIT_FAILURE);
     }
     printf("Server listening on %s:%d\n", inet_ntoa(bind_addr.sin_addr), bind_port);
-    // Run server
+
     server_loop(server_fd);
     return 0;
 }

@@ -6,5 +6,5 @@ find_package(Threads REQUIRED)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(proxy proxy.c)
+add_executable(proxy proxypass.c)
 target_link_libraries(proxy PRIVATE Threads::Threads)

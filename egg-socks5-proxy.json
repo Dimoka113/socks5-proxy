@@ -4,7 +4,7 @@
         "version": "PTDL_v2",
         "update_url": null
     },
-    "exported_at": "2024-08-07T22:55:30+04:00",
+    "exported_at": "2024-08-07T22:59:03+04:00",
     "name": "Socks5 Proxy",
     "author": "dimoka113@i113d.ru",
     "description": "The name speaks for itself.",
@@ -24,7 +24,7 @@
     },
     "scripts": {
         "installation": {
-            "script": "#!\/bin\/ash\r\ncd \/mnt\/server\r\n\r\necho -e \"Starting Download Socks5 Proxy Server...\"\r\napt install curl\r\napt install zip\r\n\r\ncurl -o proxy.zip https:\/\/filehost.i113d.ru\/sockss5-proxy.zip\r\n\r\nunzip proxy.zip",
+            "script": "#!\/bin\/ash\r\ncd \/mnt\/server\r\n\r\necho -e \"Starting Download Socks5 Proxy Server...\"\r\napt install curl\r\napt install zip\r\n\r\ncurl -o proxy.zip https:\/\/promo.i113d.ru\/socks5proxy\/proxy.zip\r\n\r\nunzip proxy.zip",
             "container": "ghcr.io\/pterodactyl\/installers:alpine",
             "entrypoint": "ash"
         }

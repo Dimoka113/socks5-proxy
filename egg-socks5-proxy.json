@@ -4,7 +4,7 @@
         "version": "PTDL_v2",
         "update_url": null
     },
-    "exported_at": "2024-08-07T20:57:20+04:00",
+    "exported_at": "2024-08-07T22:55:30+04:00",
     "name": "Socks5 Proxy",
     "author": "dimoka113@i113d.ru",
     "description": "The name speaks for itself.",
@@ -18,7 +18,7 @@
     "startup": "chmod u+rwx .\/{{FILE}} && .\/{{FILE}} -p {{SERVER_PORT}} --username {{USERNAME}} --password {{PASSWORD}}",
     "config": {
         "files": "{}",
-        "startup": "{\r\n    \"done\": [\r\n        \"change this text 1\",\r\n        \"change this text 2\"\r\n    ]\r\n}",
+        "startup": "{\r\n    \"done\": [\r\n        \"Server listening on 0.0.0.0:\"\r\n    ]\r\n}",
         "logs": "{}",
         "stop": "^C"
     },

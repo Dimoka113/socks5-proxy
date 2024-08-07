@@ -39,3 +39,16 @@ curl --socks5 127.0.0.1:1080 https://www.baidu.com
 You may also set the proxy in your browser as SOCKS5 on 127.0.0.1:1080, and start browsing websites.
 
 For more information, run `./proxy -h` for help.
+
+## Использование в ([Pterodactyl](https://pterodactyl.io/))
+
+Install Egg from ([here](https://promo.i113d.ru/socks5proxy/proxy.zip))
+
+Add Egg in your panel ([how](https://promo.i113d.ru/socks5proxy/installeggs.mp4))?
+
+Enjoy!
+
+
+
+
+

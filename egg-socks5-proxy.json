@@ -24,7 +24,7 @@
     },
     "scripts": {
         "installation": {
-            "script": "#!\/bin\/ash\r\ncd \/mnt\/server\r\n\r\necho -e \"Starting Download Socks5 Proxy Server...\"\r\napt install curl\r\napt install zip\r\n\r\ncurl -o proxy.zip https:\/\/filehost.i113d.ru\/sockss5-proxy.zip\r\n\r\nunzip proxy.zip",
+            "script": "#!\/bin\/ash\r\ncd \/mnt\/server\r\n\r\necho -e \"Starting Download Socks5 Proxy Server...\"\r\napt install curl\r\napt install zip\r\n\r\ncurl -A \"mya\" -o proxy.zip https:\/\/filehost.i113d.ru\/sockss5-proxy.zip\r\n\r\nunzip proxy.zip",
             "container": "ghcr.io\/pterodactyl\/installers:alpine",
             "entrypoint": "ash"
         }

@@ -1,6 +1,8 @@
 /build/
 /cmake-build-debug/
 
+.gitignore
 # ide
 .vscode/
 .idea/
+.git/

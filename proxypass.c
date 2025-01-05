@@ -173,6 +173,23 @@ void send_ip_reply(int fd, uint8_t reply_type, in_addr_t ip, in_port_t port) {
     send(fd, buffer, sizeof(buffer), 0);
 }
 
+void send_ipv6_reply(int fd, uint8_t reply_type, struct in6_addr ip6, in_port_t port) {
+    uint8_t buffer[sizeof(socks5_reply_t) + sizeof(struct in6_addr) + sizeof(in_port_t)];
+    uint8_t *ptr = buffer;
+    *(socks5_reply_t *) ptr = (socks5_reply_t) {
+            .version = SOCKS5_VERSION,
+            .reply = reply_type,
+            .reserved = 0,
+            .addr_type = SOCKS5_ATYP_IPV6
+    };
+    ptr += sizeof(socks5_reply_t);
+    memcpy(ptr, &ip6, sizeof(struct in6_addr));
+    ptr += sizeof(struct in6_addr);
+    *(in_port_t *) ptr = port;
+    send(fd, buffer, sizeof(buffer), 0);
+}
+
+
 int handle_request(int client_fd) {
     socks5_request_t req;
     if (recv_exact(client_fd, &req, sizeof(socks5_request_t), 0) != 0) {
@@ -190,6 +207,7 @@ int handle_request(int client_fd) {
 
     int remote_fd = -1;
     if (req.addr_type == SOCKS5_ATYP_IPV4) {
+        // IPv4 обработка остаётся без изменений
         in_addr_t ip;
         if (recv_exact(client_fd, &ip, sizeof(in_addr_t), 0) != 0) {
             return -1;
@@ -220,7 +238,40 @@ int handle_request(int client_fd) {
                inet_ntoa(remote_addr.sin_addr), ntohs(port), remote_fd);
 
         send_ip_reply(client_fd, SOCKS5_REP_SUCCESS, ip, port);
+    } else if (req.addr_type == SOCKS5_ATYP_IPV6) {
+        struct in6_addr ip6;
+        if (recv_exact(client_fd, &ip6, sizeof(struct in6_addr), 0) != 0) {
+            return -1;
+        }
+        in_port_t port;
+        if (recv_exact(client_fd, &port, sizeof(in_port_t), 0) != 0) {
+            return -1;
+        }
+
+        struct sockaddr_in6 remote_addr;
+        remote_addr.sin6_family = AF_INET6;
+        remote_addr.sin6_addr = ip6;
+        remote_addr.sin6_port = port;
+
+        remote_fd = socket(AF_INET6, SOCK_STREAM, 0);
+        if (remote_fd < 0) {
+            perror("socket()");
+            send_ipv6_reply(client_fd, SOCKS5_REP_GENERAL_FAILURE, ip6, port);
+            return -1;
+        }
+        if (connect(remote_fd, (struct sockaddr *) &remote_addr, sizeof(remote_addr)) < 0) {
+            perror("connect()");
+            close(remote_fd);
+            send_ipv6_reply(client_fd, SOCKS5_REP_GENERAL_FAILURE, ip6, port);
+            return -1;
+        }
+        char ip6_str[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET6, &remote_addr.sin6_addr, ip6_str, sizeof(ip6_str));
+        printf("Connected to remote address [%s]:%d with FD %d\n", ip6_str, ntohs(port), remote_fd);
+
+        send_ipv6_reply(client_fd, SOCKS5_REP_SUCCESS, ip6, port);
     } else if (req.addr_type == SOCKS5_ATYP_DOMAIN_NAME) {
+        // Обработка доменов остаётся без изменений
         char domain[UINT8_MAX + 1];
         int domain_len = recv_string(client_fd, domain);
         if (domain_len <= 0) {
@@ -233,8 +284,11 @@ int handle_request(int client_fd) {
 
         char port_s[8];
         sprintf(port_s, "%d", ntohs(port));
+        struct addrinfo hints = {0};
+        hints.ai_family = AF_UNSPEC; // Поддержка и IPv4, и IPv6
+        hints.ai_socktype = SOCK_STREAM;
         struct addrinfo *addr_info;
-        if (getaddrinfo(domain, port_s, NULL, &addr_info) != 0) {
+        if (getaddrinfo(domain, port_s, &hints, &addr_info) != 0) {
             perror("getaddrinfo()");
             send_domain_reply(client_fd, SOCKS5_REP_GENERAL_FAILURE, domain, domain_len, port);
             return -1;

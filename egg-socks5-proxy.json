@@ -15,7 +15,7 @@
         "Dotnet_7": "ghcr.io\/parkervcp\/yolks:dotnet_7"
     },
     "file_denylist": [],
-    "startup": "chmod u+rwx .\/{{FILE}} && if [[ \"{{USERNAME}}\" != \"None\" ]]; then .\/{{FILE}} -p {{SERVER_PORT}} --username {{USERNAME}} --password {{PASSWORD}}; fi; if [[ \"{{USERNAME}}\" == \"None\" ]]; then .\/{{FILE}} -p {{SERVER_PORT}}; fi;",
+    "startup": "chmod 777 .\/{{FILE}} && if [[ \"{{USERNAME}}\" != \"None\" ]]; then .\/{{FILE}} -p {{SERVER_PORT}} --username {{USERNAME}} --password {{PASSWORD}}; fi; if [[ \"{{USERNAME}}\" == \"None\" ]]; then .\/{{FILE}} -p {{SERVER_PORT}}; fi;",
     "config": {
         "files": "{}",
         "startup": "{\r\n    \"done\": [\r\n        \"Server listening on 0.0.0.0:\"\r\n    ]\r\n}",
